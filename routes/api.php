@@ -23,7 +23,7 @@ Route::get('/categories/{id}', [CategoryController::class, 'show']);
 Route::post('/categories', [CategoryController::class, 'store']);
 
 // Update an existing category
-Route::put('/categories/{id}', [CategoryController::class, 'update']);
+Route::post('/categories/{id}', [CategoryController::class, 'update']);
 
 // Delete a category
 Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
