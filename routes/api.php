@@ -38,7 +38,7 @@ Route::post('/products', [ProductController::class, 'store']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 
 // Update a product
-Route::put('/products/{id}', [ProductController::class, 'update']);
+Route::post('/products/{id}', [ProductController::class, 'update']);
 Route::patch('/products/{id}', [ProductController::class, 'update']); // Optional
 
 // Delete a product
