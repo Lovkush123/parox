@@ -16,16 +16,29 @@ class SizeController extends Controller
     // Create new size
     public function store(Request $request)
     {
-        $request->validate([
-            'size' => 'required|string',
-            'price' => 'required|numeric',
-            'product_id' => 'required|integer',
+            $validated = $request->validate([
+            'product_id'   => 'required|integer|exists:products,id',
+            'size'         => 'required|string',
+            'price'        => 'required|numeric',
+            'mrp'          => 'required|integer',
+            'cod'          => 'required|integer', // changed from integer
+            'total_stock'  => 'nullable|integer',
+            'stock_status' => 'nullable|string', // change if you're using enums or constants
+            'length'       => 'nullable|numeric', // decimal => numeric
+            'width'        => 'nullable|numeric',
+            'height'       => 'nullable|numeric',
+            'weight'       => 'nullable|numeric',
+            'selling'      => 'nullable|numeric',
         ]);
 
-        $size = Size::create($request->all());
+        $size = Size::create($validated);
 
-        return response()->json(['message' => 'Size created successfully', 'data' => $size], 201);
+        return response()->json([
+            'message' => 'Size created successfully',
+            'data' => $size,
+        ], 201);
     }
+
 
     // Show specific size
     public function show($id)

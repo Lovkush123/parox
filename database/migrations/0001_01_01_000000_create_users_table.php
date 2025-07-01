@@ -19,7 +19,6 @@ return new class extends Migration
             $table->string('number')->nullable();
             $table->string('profile')->nullable();
             $table->string('password')->nullable();           // Made nullable
-            $table->string('otp')->nullable();                // Added OTP column
             $table->timestamps();
         });
     }

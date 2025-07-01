@@ -15,28 +15,33 @@ class ImageController extends Controller
     }
 
     // Store a new image with file upload
-    public function store(Request $request)
-    {
-        $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'product_id' => 'nullable|exists:products,id',
-            'alt_text' => 'nullable|string',
-        ]);
+  public function store(Request $request)
+{
+    $request->validate([
+        'images' => 'required|array',
+        'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        'product_id' => 'nullable|exists:products,id',
+        'alt_texts' => 'nullable|array',
+        'alt_texts.*' => 'nullable|string',
+    ]);
 
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('images', 'public');
-        } else {
-            return response()->json(['error' => 'Image file not found'], 400);
-        }
+    $storedImages = [];
+
+    foreach ($request->file('images') as $index => $imageFile) {
+        $imagePath = $imageFile->store('images', 'public');
 
         $image = Image::create([
             'image_path' => $imagePath,
             'product_id' => $request->product_id,
-            'alt_text' => $request->alt_text,
+            'alt_text' => $request->alt_texts[$index] ?? null,
         ]);
 
-        return response()->json($image, 201);
+        $storedImages[] = $image;
     }
+
+    return response()->json($storedImages, 201);
+}
+
 
     // Show a specific image
     public function show($id)
@@ -59,7 +64,7 @@ class ImageController extends Controller
 
         $request->validate([
             'image' => 'sometimes|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'product_id' => 'nullable|exists:products,id',
+            'product_id' => 'required|exists:products,id',
             'alt_text' => 'nullable|string',
         ]);
 
