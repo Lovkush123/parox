@@ -5,11 +5,85 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use App\Mail\SendOtpMail;
 
 class UserController extends Controller
 {
-    // Get all users
+    /**
+     * ✅ Login or Register with OTP (no expectsJson check)
+     */
+    public function loginOrRegisterWithOTP(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $otp = rand(100000, 999999);
+
+        $user = User::where('email', $request->email)->first();
+
+        if ($user) {
+            $user->otp = $otp;
+            $user->save();
+        } else {
+            $user = User::create([
+                'email' => $request->email,
+                'otp' => $otp,
+                'username' => null,
+                'name' => null,
+                'password' => null,
+            ]);
+        }
+
+        try {
+            Mail::to($request->email)->send(new SendOtpMail($otp));
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to send OTP',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => 'OTP sent to your email',
+            'email' => $request->email
+        ], 200);
+    }
+
+    /**
+     * ✅ Verify the OTP (no expectsJson check)
+     */
+    public function verifyOtp(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'otp' => 'required|digits:6',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        if ($user->otp === $request->otp) {
+            $user->otp = null;
+            $user->save();
+
+            return response()->json([
+                'message' => 'OTP verified successfully',
+                'user' => $user
+            ], 200);
+        }
+
+        return response()->json(['message' => 'Invalid OTP'], 401);
+    }
+
+    /**
+     * ✅ Get all users
+     */
     public function index()
     {
         $users = User::all()->map(function ($user) {
@@ -20,7 +94,9 @@ class UserController extends Controller
         return response()->json($users);
     }
 
-    // Create a new user
+    /**
+     * ✅ Create new user (non-OTP)
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -52,7 +128,9 @@ class UserController extends Controller
         return response()->json($user, 201);
     }
 
-    // Show a specific user
+    /**
+     * ✅ Show a specific user
+     */
     public function show($id)
     {
         $user = User::find($id);
@@ -66,7 +144,9 @@ class UserController extends Controller
         return response()->json($user);
     }
 
-    // Update user data
+    /**
+     * ✅ Update user data
+     */
     public function update(Request $request, $id)
     {
         $user = User::find($id);
@@ -82,7 +162,6 @@ class UserController extends Controller
         ]);
 
         if ($request->hasFile('profile')) {
-            // Delete old image if exists
             if ($user->profile && Storage::disk('public')->exists($user->profile)) {
                 Storage::disk('public')->delete($user->profile);
             }
@@ -95,6 +174,7 @@ class UserController extends Controller
         $user->name = $request->name ?? $user->name;
         $user->email = $request->email ?? $user->email;
         $user->number = $request->number ?? $user->number;
+
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
         }
@@ -106,7 +186,9 @@ class UserController extends Controller
         return response()->json($user);
     }
 
-    // Delete user
+    /**
+     * ✅ Delete user
+     */
     public function destroy($id)
     {
         $user = User::find($id);
@@ -115,7 +197,6 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        // Delete profile image if exists
         if ($user->profile && Storage::disk('public')->exists($user->profile)) {
             Storage::disk('public')->delete($user->profile);
         }

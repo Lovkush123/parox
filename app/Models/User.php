@@ -11,7 +11,6 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    // Table name (optional, Laravel automatically assumes 'users')
     protected $table = 'users';
 
     /**
@@ -24,14 +23,16 @@ class User extends Authenticatable
         'number',
         'profile',
         'password',
+        'otp', // ✅ Added for OTP login
     ];
 
     /**
-     * The attributes that should be hidden for arrays.
+     * The attributes that should be hidden for arrays (API responses).
      */
     protected $hidden = [
         'password',
         'remember_token',
+        'otp', // ✅ Hiding OTP from response
     ];
 
     /**

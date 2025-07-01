@@ -14,6 +14,7 @@ class Product extends Model
         'description',
         'image',
         'category_id',
+        'note', // ✅ Added note field here
     ];
 
     // Relationship to Category (optional, if you have a Category model)

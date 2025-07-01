@@ -8,11 +8,18 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SizeController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\CouponController;
+use App\Http\Controllers\ProductMediaController;
+use App\Http\Controllers\OrderProductController;
+use App\Http\Controllers\OrderListController;
+use App\Http\Controllers\ImageController;
+// Route::get('/users', [UserController::class, 'index']);
+Route::post('/login-or-register', [UserController::class, 'loginOrRegisterWithOTP']);
+Route::post('/verify-otp', [UserController::class, 'verifyOtp']);
+
 Route::get('/users', [UserController::class, 'index']);
 Route::post('/users', [UserController::class, 'store']);
-Route::post('/login', [UserController::class, 'login']);
 Route::get('/users/{id}', [UserController::class, 'show']);
-Route::put('/users/{id}', [UserController::class, 'update']);
+Route::post('/users/{id}', [UserController::class, 'update']);
 Route::delete('/users/{id}', [UserController::class, 'destroy']);
 Route::get('/categories', [CategoryController::class, 'index']);
 
@@ -61,3 +68,36 @@ Route::post('/coupons', [CouponController::class, 'store']);         // Create a
 Route::get('/coupons/{id}', [CouponController::class, 'show']);      // Show a specific coupon
 Route::put('/coupons/{id}', [CouponController::class, 'update']);    // Update a specific coupon
 Route::delete('/coupons/{id}', [CouponController::class, 'destroy']); // Delete a specific coupon
+
+Route::post('/product-media', [ProductMediaController::class, 'store']);
+Route::get('/product-media', [ProductMediaController::class, 'index']);
+Route::delete('/product-media/{id}', [ProductMediaController::class, 'destroy']);
+
+// List all order products
+Route::get('/order-products', [OrderProductController::class, 'index']);
+
+// Show a single order product by ID
+Route::get('/order-products/{id}', [OrderProductController::class, 'show']);
+
+// Create a new order product
+Route::post('/order-products', [OrderProductController::class, 'store']);
+
+// Update an existing order product
+Route::put('/order-products/{id}', [OrderProductController::class, 'update']);
+
+// Delete an order product
+Route::delete('/order-products/{id}', [OrderProductController::class, 'destroy']);
+Route::get('/order-lists', [OrderListController::class, 'index']);
+Route::get('/order-lists/{id}', [OrderListController::class, 'show']);
+Route::post('/order-lists', [OrderListController::class, 'store']);
+Route::put('/order-lists/{id}', [OrderListController::class, 'update']);
+Route::delete('/order-lists/{id}', [OrderListController::class, 'destroy']);
+
+// Route::post('/users/send-otp', [UserController::class, 'sendOtp']);
+// Route::post('/users/login-otp', [UserController::class, 'loginWithOtp']);
+// Route::post('/send-otp', [UserController::class, 'sendOtp']);
+// Route::post('/verify-otp', [UserController::class, 'verifyOtp']);
+Route::post('/images', [ImageController::class, 'store']);
+Route::get('/images/{id}', [ImageController::class, 'show']);
+Route::put('/images/{id}', [ImageController::class, 'update']);
+Route::delete('/images/{id}', [ImageController::class, 'destroy']);

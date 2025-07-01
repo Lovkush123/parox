@@ -24,6 +24,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name'        => 'required|string|max:255',
             'description' => 'nullable|string',
+            'note'        => 'nullable|string', // ✅ Added note validation
             'image'       => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'category_id' => 'required|exists:categories,id',
         ]);
@@ -48,36 +49,33 @@ class ProductController extends Controller
     /**
      * Update the specified product in storage.
      */
-   public function update(Request $request, $id)
-{
-    $product = Product::findOrFail($id); // Find product by ID
+    public function update(Request $request, $id)
+    {
+        $product = Product::findOrFail($id);
 
-    $validated = $request->validate([
-        'name'        => 'sometimes|required|string|max:255',
-        'description' => 'nullable|string',
-        'image'       => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-        'category_id' => 'sometimes|required|exists:categories,id',
-    ]);
+        $validated = $request->validate([
+            'name'        => 'sometimes|required|string|max:255',
+            'description' => 'nullable|string',
+            'note'        => 'nullable|string', // ✅ Added note validation
+            'image'       => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'category_id' => 'sometimes|required|exists:categories,id',
+        ]);
 
-    if ($request->hasFile('image')) {
-        // Delete the old image if it exists
-        if ($product->image && Storage::disk('public')->exists($product->image)) {
-            Storage::disk('public')->delete($product->image);
+        if ($request->hasFile('image')) {
+            if ($product->image && Storage::disk('public')->exists($product->image)) {
+                Storage::disk('public')->delete($product->image);
+            }
+
+            $validated['image'] = $request->file('image')->store('products', 'public');
         }
 
-        // Store new image
-        $validated['image'] = $request->file('image')->store('products', 'public');
+        $product->update($validated);
+
+        return response()->json([
+            'message' => 'Product updated successfully',
+            'product' => $product
+        ]);
     }
-
-    // Update product
-    $product->update($validated);
-
-    return response()->json([
-        'message' => 'Product updated successfully',
-        'product' => $product
-    ]);
-}
-
 
     /**
      * Remove the specified product from storage.
