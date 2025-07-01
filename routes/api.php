@@ -33,8 +33,8 @@ Route::apiResource('addresses', AddressController::class);
 Route::apiResource('categories', CategoryController::class);
 
 // ✅ Product Routes
-Route::apiResource('products', ProductController::class)->except(['update']);
-Route::match(['post', 'patch'], '/products/{id}', [ProductController::class, 'update']); // Accept both POST & PATCH for update
+Route::apiResource('products', ProductController::class);
+// Route::match(['post', 'patch'], '/products/{id}', [ProductController::class, 'update']); // Accept both POST & PATCH for update
 
 // ✅ Size Routes
 Route::apiResource('sizes', SizeController::class);
