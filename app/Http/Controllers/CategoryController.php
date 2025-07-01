@@ -9,10 +9,30 @@ use Illuminate\Support\Facades\Storage;
 class CategoryController extends Controller
 {
     // 📌 List all categories
-    public function index()
-    {
-        return response()->json(Category::all(), 200);
+   public function index(Request $request)
+{
+    $query = Category::query();
+
+    // 🔍 Search by name
+    if ($request->filled('name')) {
+        $query->where('name', 'like', '%' . $request->name . '%');
     }
+
+    // 🔢 Pagination
+    $perPage = (int) $request->get('per_page', 10);
+    $page = (int) $request->get('page_number', 1);
+    $categories = $query->paginate($perPage, ['*'], 'page', $page);
+
+    // 🌐 Convert image path to full URL
+    $categories->getCollection()->transform(function ($category) {
+        if ($category->image) {
+            $category->image = url('storage/' . $category->image);
+        }
+        return $category;
+    });
+
+    return response()->json($categories);
+}
 
     // 🆕 Create a new category with image upload
     public function store(Request $request)
