@@ -22,4 +22,18 @@ class Orders extends Model
     'total',
     'payment_type',
     ];
+
+
+    public function user() {
+        return $this->belongsTo(User::class);
+    }
+
+    public function address() {
+        return $this->belongsTo(Address::class);
+    }
+
+     public function products()
+    {
+        return $this->hasMany(OrderProducts::class, 'order_id')->with(["product", "size"]);
+    }
 }

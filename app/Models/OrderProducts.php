@@ -16,4 +16,21 @@ class OrderProducts extends Model
     'quantity',
     'price',
     ];
+
+      public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    // 🔁 Relation to Product
+    public function product()
+    {
+        return $this->belongsTo(Product::class, "product_id");
+    }
+
+    // 🔁 Relation to Size
+    public function size()
+    {
+        return $this->belongsTo(Size::class, "size_id");
+    }
 }

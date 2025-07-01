@@ -12,7 +12,8 @@ use App\Http\Controllers\{
     ProductMediaController,
     OrderProductController,
     OrderListController,
-    ImageController
+    ImageController,
+    OrdersController
 };
 
 // ✅ Auth Routes
@@ -58,3 +59,13 @@ Route::apiResource('order-lists', OrderListController::class);
 
 // ✅ Image Routes
 Route::apiResource('images', ImageController::class)->except(['index']); // Add index if needed
+
+
+// ✅ Orders
+Route::get('/orders', [OrdersController::class, 'index']);         // List orders (filters: user_id, status, etc.)
+Route::post('/orders', [OrdersController::class, 'placeOrder']);   // Create a new order
+Route::get('/orders/{id}', [OrdersController::class, 'show']);     // Show single order
+Route::put('/orders/{id}', [OrdersController::class, 'update']);   // Update order statuses
+
+// 💳 PhonePe Payment
+Route::post('/phonepe/response', [OrdersController::class, 'phonepeResponse'])->name('phonepe.response');
