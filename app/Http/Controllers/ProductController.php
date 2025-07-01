@@ -131,11 +131,16 @@ public function index(Request $request)
         $product = Product::findOrFail($id);
 
         $validated = $request->validate([
-            'name'        => 'sometimes|required|string|max:255',
+            'name'        => 'sometime|string|max:255',
             'description' => 'nullable|string',
-            'note'        => 'nullable|string', // ✅ Added note validation
+            'note'        => 'nullable|string',
             'image'       => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            'category_id' => 'sometimes|required|exists:categories,id',
+            'category_id' => 'sometime|exists:categories,id',
+            'brand'       => 'nullable|string',
+            'tagline'     => 'nullable|string',
+            'heart_notes' => 'nullable|string',
+            'top_notes'   => 'nullable|string',
+            'base_notes'  => 'nullable|string',
         ]);
 
         if ($request->hasFile('image')) {

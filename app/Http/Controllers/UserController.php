@@ -8,91 +8,148 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use App\Mail\SendOtpMail;
+use App\Services\OtpService;
 
 class UserController extends Controller
 {
     /**
      * ✅ Login or Register with OTP (no expectsJson check)
      */
-    public function loginOrRegisterWithOTP(Request $request)
+   public function loginOrRegisterWithOTP(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'email'     => 'nullable|email',
+            'number' => 'nullable|digits:10',
         ]);
+
+        if (!$request->filled('email') && !$request->filled('number')) {
+            return response()->json([
+                'message' => 'Either email or number is required.'
+            ], 422);
+        }
 
         $otp = rand(100000, 999999);
 
-        $user = User::where('email', $request->email)->first();
+        // 🔍 Try finding user by email or mobile
+        $user = null;
+
+        if ($request->filled('email')) {
+            $user = User::where('email', $request->email)->first();
+        } elseif ($request->filled('number')) {
+            $user = User::where('number', $request->number)->first();
+        }
 
         if ($user) {
             $user->otp = $otp;
             $user->save();
         } else {
+            // 👤 Create user with whatever field is available
             $user = User::create([
-                'email' => $request->email,
-                'otp' => $otp,
-                'username' => null,
-                'name' => null,
-                'password' => null,
+                'email'     => $request->email,
+                'number' => $request->number,
+                'otp'       => $otp,
+                'username'  => null,
+                'name'      => null,
+                'password'  => null,
             ]);
         }
 
-        try {
-            Mail::to($request->email)->send(new SendOtpMail($otp));
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to send OTP',
-                'error' => $e->getMessage()
-            ], 500);
+        // 📧 Send OTP via email if email exists
+         if ($user->number) {
+            OtpService::sendOTPPhone($otp, $user->number, 'account_verify_peraux');
         }
+        
+        if ($user->email) {
+            Mail::to($user->email)->send(new SendOtpMail($otp));
+        }
+       
 
         return response()->json([
-            'message' => 'OTP sent to your email',
-            'email' => $request->email
+            'message' => 'OTP sent successfully.',
         ], 200);
     }
+
 
     /**
      * ✅ Verify the OTP (no expectsJson check)
      */
     public function verifyOtp(Request $request)
-    {
-        $request->validate([
-            'email' => 'required|email',
-            'otp' => 'required|digits:6',
-        ]);
+        {
+            $request->validate([
+                'email'     => 'required_without:number|nullable|email',
+                'number' => 'required_without:email|nullable|digits:10',
+                'otp'       => 'required|digits:6',
+            ]);
 
-        $user = User::where('email', $request->email)->first();
+            // Make sure at least one identifier is present
+            if (!$request->filled('email') && !$request->filled('number')) {
+                return response()->json([
+                    'message' => 'Either email or number is required.'
+                ], 422);
+            }
 
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
+            // Dynamically search by email or mobile
+            $user = null;
+            if ($request->filled('email')) {
+                $user = User::where('email', $request->email)->first();
+            } elseif ($request->filled('number')) {
+                $user = User::where('number', $request->number)->first();
+            }
+
+            if (!$user) {
+                return response()->json(['message' => 'User not found'], 404);
+            }
+
+            // Match OTP
+            if ($user->otp === $request->otp) {
+                $user->otp = null;
+                $user->save();
+
+                $token = $user->createToken('user-token')->plainTextToken;
+
+                return response()->json([
+                    'message' => 'OTP verified successfully',
+                    'user'    => $user,
+                    'token'   => $token,
+
+                ], 200);
+            }
+
+            return response()->json(['message' => 'Invalid OTP'], 401);
         }
 
-        if ($user->otp === $request->otp) {
-            $user->otp = null;
-            $user->save();
-
-            return response()->json([
-                'message' => 'OTP verified successfully',
-                'user' => $user
-            ], 200);
-        }
-
-        return response()->json(['message' => 'Invalid OTP'], 401);
-    }
 
     /**
      * ✅ Get all users
      */
-    public function index()
-    {
-        $users = User::all()->map(function ($user) {
-            $user->profile_url = $user->profile ? asset('storage/' . $user->profile) : null;
-            return $user;
-        });
+   public function index(Request $request)
+{
+    $query = User::query();
 
-        return response()->json($users);
+    // 🔍 Search by name, email or number
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('email', 'like', "%{$search}%")
+              ->orWhere('number', 'like', "%{$search}%");
+        });
     }
+
+    // 📄 Pagination
+    $perPage = (int) $request->get('per_page', 10);
+    $page = (int) $request->get('page_number', 1);
+
+    $users = $query->paginate($perPage, ['*'], 'page', $page);
+
+    // 🌐 Add full profile URL
+    $users->getCollection()->transform(function ($user) {
+        $user->profile_url = $user->profile ? asset('storage/' . $user->profile) : null;
+        return $user;
+    });
+
+    return response()->json($users);
+}
 
     /**
      * ✅ Create new user (non-OTP)
@@ -147,6 +204,7 @@ class UserController extends Controller
     /**
      * ✅ Update user data
      */
+
     public function update(Request $request, $id)
     {
         $user = User::find($id);
@@ -156,11 +214,14 @@ class UserController extends Controller
         }
 
         $request->validate([
-            'username' => 'sometimes|unique:users,username,' . $id,
-            'email' => 'sometimes|email|unique:users,email,' . $id,
-            'profile' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'username' => 'sometimes|string|max:255',
+            'name'     => 'sometimes|string|max:255',
+            'email'    => 'sometimes|email|unique:users,email,' . $user->id,
+            'number'   => 'sometimes|digits:10|unique:users,number,' . $user->id,
+            'profile'  => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
+        // Handle profile image
         if ($request->hasFile('profile')) {
             if ($user->profile && Storage::disk('public')->exists($user->profile)) {
                 Storage::disk('public')->delete($user->profile);
@@ -170,7 +231,7 @@ class UserController extends Controller
             $user->profile = $profilePath;
         }
 
-        $user->username = $request->username ?? $user->username;
+        // Update fields
         $user->name = $request->name ?? $user->name;
         $user->email = $request->email ?? $user->email;
         $user->number = $request->number ?? $user->number;
@@ -181,10 +242,12 @@ class UserController extends Controller
 
         $user->save();
 
+        // Add full profile URL
         $user->profile_url = $user->profile ? asset('storage/' . $user->profile) : null;
 
         return response()->json($user);
     }
+
 
     /**
      * ✅ Delete user
@@ -204,5 +267,55 @@ class UserController extends Controller
         $user->delete();
 
         return response()->json(['message' => 'User deleted successfully']);
+    }
+
+   public function adminlogin(Request $request)
+    {
+        $request->validate([
+            'username' => 'required|exists:users,username',
+            'password' => 'required',
+        ]);
+
+        // Find user by username
+        $user = User::where('username', $request->username)->first();
+
+        // Check if user exists and password matches
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'message' => 'Invalid username or password'
+            ], 401);
+        }
+
+        // Create token
+        $token = $user->createToken('admin-token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Login successful',
+            'user'    => $user,
+            'token'   => $token
+        ]);
+    }
+
+
+    public function createAdmin(Request $request)
+    {
+        $request->validate([
+            'username' => 'required|string|unique:users,username',
+            'email'    => 'required|email|unique:users,email',
+            'password' => 'required|string|min:6|confirmed', // expects password_confirmation field as well
+        ]);
+
+        $admin = User::create([
+            'username' => $request->username,
+            'email'    => $request->email,
+            'password' => Hash::make($request->password),
+        ]);
+        $token = $admin->createToken('admin-token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Admin account created successfully',
+            'admin'   => $admin,
+            'token' => $token
+        ], 201);
     }
 }

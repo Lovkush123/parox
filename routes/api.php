@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{
+    AddressController,
     UserController,
     CategoryController,
     ProductController,
@@ -17,10 +18,16 @@ use App\Http\Controllers\{
 // ✅ Auth Routes
 Route::post('/login-or-register', [UserController::class, 'loginOrRegisterWithOTP']);
 Route::post('/verify-otp', [UserController::class, 'verifyOtp']);
+Route::post('/admin-register', [UserController::class, 'createAdmin']);
+Route::post('/admin-login', [UserController::class, 'adminlogin']);
 
 // ✅ User Routes
 Route::apiResource('users', UserController::class)->except(['update']);
 Route::post('/users/{id}', [UserController::class, 'update']); // Custom update using POST
+
+// ✅ Address Routes
+Route::apiResource('addresses', AddressController::class);
+
 
 // ✅ Category Routes
 Route::apiResource('categories', CategoryController::class);
