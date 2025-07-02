@@ -26,7 +26,7 @@ class CategoryController extends Controller
     // 🌐 Convert image path to full URL
     $categories->getCollection()->transform(function ($category) {
         if ($category->image) {
-            $category->image = url('storage/' . $category->image);
+            $category->image = asset('storage/' . $category->image);
         }
         return $category;
     });
