@@ -60,7 +60,7 @@ public function index(Request $request)
         $image->image_path = asset('storage/' . $image->image_path);
             return $image;
         });
- if ($product->category && $product->category->image) {
+    if ($product->category && $product->category->image) {
         $product->category->image = asset('storage/' . $product->category->image);
     }
 
@@ -111,6 +111,11 @@ public function index(Request $request)
         $counter = 1;
         while (\App\Models\Product::where('slug', $validated['slug'])->exists()) {
             $validated['slug'] = $originalSlug . '-' . $counter++;
+        }
+
+         if ($request->hasFile('image')) {
+
+            $validated['image'] = $request->file('image')->store('products', 'public');
         }
 
         $product = Product::create($validated);

@@ -4,11 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\OrderProducts;
 use App\Models\Orders;
+use App\Services\GenratePdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\BookingConfirmationMail;
+use App\Services\OtpService;
 
 class OrdersController extends Controller
 {
@@ -108,8 +112,18 @@ class OrdersController extends Controller
 
         $orders = Orders::with(['user', 'address', 'products'])->find($order->id);
 
-        $token = $this->createOrder($orders);
+        // =============== Create Shiprocket order ==============
+        $this->createOrder($orders);
 
+        // ============== Generate PDf ====================
+        $url = GenratePdf::generateInvoice($orders);
+
+        // ================== Sent Order Success Mail ===============
+        Mail::to($orders->user->email)->send(new BookingConfirmationMail($orders));
+
+        // ============== Send Order Success Whatsapp ===============
+        // OtpService::sendWhatsAppBookingConfirmation($orders, $url);
+        
 
         // COD fallback
         return response()->json([

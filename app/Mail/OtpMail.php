@@ -25,7 +25,7 @@ class OtpMail extends Mailable
      */
     public function build()
     {
-        return $this->subject('Your OTP Code')
+        return $this->subject('Account Varificatio OTP')
                     ->view('emails.otp');
     }
 }
