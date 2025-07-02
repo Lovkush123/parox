@@ -124,10 +124,10 @@
                     <td colspan="5" class="text-right">Subtotal</td>
                     <td>₹{{ number_format($booking->subtotal, 2) }}</td>
                 </tr>
-                <tr>
+                <!-- <tr>
                     <td colspan="5" class="text-right">Tax</td>
                     <td>₹{{ number_format($booking->tax, 2) }}</td>
-                </tr>
+                </tr> -->
                 <tr>
                     <td colspan="5" class="text-right">Total</td>
                     <td>₹{{ number_format($booking->total, 2) }}</td>

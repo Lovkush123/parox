@@ -61,56 +61,15 @@ class OrdersController extends Controller
         }
 
         DB::commit();
+        $orders = Orders::with(['user', 'address', 'products'])->find($order->id);
 
         // Handle PhonePe payment
         if ($request->payment_type === 'prepaid') {
-            $payload = [
-                'merchantId'            => env('PHONEPE_MERCHANT_ID'),
-                'merchantTransactionId' => $order->unique_order_id,
-                'merchantUserId'        => $order->user_id,
-                'amount'                => (int) ($order->total * 100), // in paise
-                'redirectUrl'           => route('phonepe.response'),
-                'redirectMode'          => 'POST',
-                'paymentInstrument'     => [
-                    'type' => 'PAY_PAGE',
-                ],
-            ];
+           $response =  $this->initiatePhonePePayment($orders);
 
-            $jsonPayload     = json_encode($payload);
-            $base64Payload   = base64_encode($jsonPayload);
-            $saltKey         = env('PHONEPE_SALT_KEY');
-            $saltIndex       = env('PHONEPE_SALT_INDEX');
-            $stringToHash    = $base64Payload . "/pg/v1/pay" . $saltKey;
-            $xVerify         = hash('sha256', $stringToHash) . "###" . $saltIndex;
-            $baseUrl         = $this->getPhonePeBaseUrl();
-
-            $response = Http::withHeaders([
-                'Content-Type'   => 'application/json',
-                'X-VERIFY'       => $xVerify,
-                'X-MERCHANT-ID'  => env('PHONEPE_MERCHANT_ID'),
-            ])->post("$baseUrl/pg/v1/pay", [
-                'request' => $base64Payload,
-            ]);
-
-            $responseData = $response->json();
-
-            if (!empty($responseData['success']) && $responseData['success'] === true) {
-                $paymentUrl = $responseData['data']['instrumentResponse']['redirectInfo']['url'];
-
-                return response()->json([
-                    'message'     => 'Order placed. Redirect to PhonePe payment.',
-                    'order'       => $order,
-                    'payment_url' => $paymentUrl,
-                ], 201);
-            }
-
-            return response()->json([
-                'message' => 'Failed to initiate payment',
-                'error'   => $responseData,
-            ], 500);
+           return $response;
         }
 
-        $orders = Orders::with(['user', 'address', 'products'])->find($order->id);
 
         // =============== Create Shiprocket order ==============
         $this->createOrder($orders);
@@ -216,6 +175,23 @@ public function index(Request $request)
         $orders = $query->with(['user', 'address', 'products'])
                         ->orderBy('created_at', 'desc')
                         ->paginate($perPage, ['*'], 'page', $page);
+
+  $orders->getCollection()->transform(function ($order) {
+    foreach ($order->products as $productItem) {
+        $product = $productItem->product;
+
+        // Generate image URLs from image_path
+        if ($product && !empty($product->images)) {
+            $product->image_urls = collect($product->images)->map(function ($img) {
+                return asset('storage/' . $img['image_path']);
+            })->toArray();
+        } else {
+            $product->image_urls = [];
+        }
+    }
+
+    return $order;
+});
 
         return response()->json($orders);
     }
@@ -371,6 +347,64 @@ $payload = [
             'error' => $e->getMessage(),
         ];
     }
+}
+
+public function initiatePhonePePayment($order)
+{
+    $accessToken = $this->getPhonePeAccessToken();
+
+    return $accessToken;
+
+    if (!$accessToken) {
+        return response()->json(['error' => 'Failed to get PhonePe access token'], 500);
+    }
+
+    $payload = [
+        "merchantOrderId" => $order->unique_order_id,
+        "amount" => (int) ($order->total * 100), // in paise
+        "paymentFlow" => [
+            "type" => "PG_CHECKOUT",
+            "message" => "Order payment for " . $order->unique_order_id,
+            "merchantUrls" => [
+                "redirectUrl" => route('phonepe.response')
+            ]
+        ]
+    ];
+
+    $baseUrl = $this->getPhonePeBaseUrl();
+    $response = Http::withHeaders([
+        'Content-Type'  => 'application/json',
+        'Authorization' => 'O-Bearer ' . $accessToken
+    ])->post($baseUrl . '/checkout/v2/pay', $payload);
+
+    if ($response->successful()) {
+        return response()->json([
+            'message' => 'Redirect to PhonePe payment page',
+            'data' => $response->json(),
+        ]);
+    }
+
+    \Log::error('PhonePe Payment Initiation Error:', $response->json());
+    return response()->json(['error' => 'Failed to initiate payment'], 500);
+}
+
+
+public function getPhonePeAccessToken()
+{
+    $baseUrl = $this->getPhonePeBaseUrl();
+    $response = Http::asForm()->post('https://api-preprod.phonepe.com/apis/pg-sandbox/v1/oauth/token', [
+        'client_id'     => env('PHONEPE_CLIENT_ID'),
+        'client_secret' => env('PHONEPE_CLIENT_SECRET'),
+        'client_version'=> '1',
+        'grant_type'    => 'client_credentials',
+    ]);
+
+    if ($response->successful()) {
+        return $response->json()['access_token'];
+    }
+
+    \Log::error('PhonePe Token Error:', $response->json());
+    return null;
 }
 
 

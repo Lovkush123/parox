@@ -25,7 +25,7 @@ class OrderProducts extends Model
     // 🔁 Relation to Product
     public function product()
     {
-        return $this->belongsTo(Product::class, "product_id");
+        return $this->belongsTo(Product::class, "product_id")->with(["images"]);
     }
 
     // 🔁 Relation to Size

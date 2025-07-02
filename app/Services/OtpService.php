@@ -61,10 +61,9 @@ public static function sendWhatsAppBookingConfirmation($order, $invoicePath)
             'apikey'     => $token,
             'templatename'=> "booking_confirm",
             'mobile'     => '+91' . $order->user->number,
-            'dvariables' => ["1"=>$order->user->name, "2"=>$order->unique_order_id, "3"=>$order->created_at->format('d M Y'), "4"=>$order->total], 
-            // 'message'    => "Hello {$order->user->name},\n\nYour booking has been confirmed ✅\n\n🧾 Order ID: {$order->unique_order_id}\n📅 Date: {$order->created_at->format('d M Y')}\n💰 Total: ₹{$order->total}\n\nYour invoice is attached.\n\nThank you for choosing Peraux Luxuries 💎",
-            'media'  => $invoiceUrl,
-            'file_name'  => 'invoice_' . $order->unique_order_id . '.pdf',
+            'dvariables' => $order->user->name.",".$order->unique_order_id.",".$order->user->name.",".$order->created_at->format('d M Y').",".$order->total, 
+            // 'media'  => $invoiceUrl,
+            // 'file_name'  => 'invoice_' . $order->unique_order_id . '.pdf',
         ]);
 
         \Log::info('WhatsApp invoice sent', ['response' => $response->body()]);
