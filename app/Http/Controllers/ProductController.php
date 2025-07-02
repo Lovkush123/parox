@@ -100,7 +100,9 @@ public function index(Request $request)
             'heart_notes' => 'nullable|string',
             'top_notes'   => 'nullable|string',
             'base_notes'  => 'nullable|string',
-        ]);
+            'features'    => 'nullable|string',
+            'gender'      => 'nullable|string',
+        ]); 
 
         $validated['slug'] = Str::slug($validated['name']);
 
@@ -141,6 +143,8 @@ public function index(Request $request)
             'heart_notes' => 'nullable|string',
             'top_notes'   => 'nullable|string',
             'base_notes'  => 'nullable|string',
+            'features'    => 'nullable|string',
+            'gender'      => 'nullable|string',
         ]);
 
         if ($request->hasFile('image')) {

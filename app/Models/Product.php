@@ -21,6 +21,8 @@ class Product extends Model
     'heart_notes',
     'top_notes',
     'base_notes',
+    'features',
+    'gender',
     'status', // if you want to mass assign status as well
 ];
     // Relationship to Category (optional, if you have a Category model)
