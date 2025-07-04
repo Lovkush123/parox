@@ -68,4 +68,4 @@ Route::get('/orders/{id}', [OrdersController::class, 'show']);     // Show singl
 Route::put('/orders/{id}', [OrdersController::class, 'update']);   // Update order statuses
 
 // 💳 PhonePe Payment
-Route::post('/phonepe/response', [OrdersController::class, 'phonepeResponse'])->name('phonepe.response');
+Route::match(['get', 'post'], '/phonepe/response', [OrdersController::class, 'phonepeResponse'])->name('phonepe.response');

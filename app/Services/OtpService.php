@@ -62,7 +62,7 @@ public static function sendWhatsAppBookingConfirmation($order, $invoicePath)
             'templatename'=> "booking_confirm",
             'mobile'     => '+91' . $order->user->number,
             'dvariables' => $order->user->name.",".$order->unique_order_id.",".$order->user->name.",".$order->created_at->format('d M Y').",".$order->total, 
-            // 'media'  => $invoiceUrl,
+            'media'  => $invoiceUrl,
             // 'file_name'  => 'invoice_' . $order->unique_order_id . '.pdf',
         ]);
 
