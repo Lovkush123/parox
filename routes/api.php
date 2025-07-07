@@ -13,7 +13,9 @@ use App\Http\Controllers\{
     OrderProductController,
     OrderListController,
     ImageController,
-    OrdersController
+    OrdersController,
+    ProductReviewController,
+    CouponProductController
 };
 
 // ✅ Auth Routes
@@ -45,6 +47,8 @@ Route::apiResource('order', OrderController::class);
 
 // ✅ Coupon Routes
 Route::apiResource('coupons', CouponController::class);
+Route::post('/coupons', [App\Http\Controllers\CouponController::class, 'store']);
+Route::post('/coupons/create', [App\Http\Controllers\CouponController::class, 'createCoupon']);
 
 // ✅ Product Media Routes
 Route::post('/product-media', [ProductMediaController::class, 'store']);
@@ -69,3 +73,20 @@ Route::put('/orders/{id}', [OrdersController::class, 'update']);   // Update ord
 
 // 💳 PhonePe Payment
 Route::match(['get', 'post'], '/phonepe/response', [OrdersController::class, 'phonepeResponse'])->name('phonepe.response');
+
+// Product Reviews CRUD
+Route::get('/products/{productId}/reviews', [ProductReviewController::class, 'index']);
+Route::post('/products/reviews', [ProductReviewController::class, 'store']);
+Route::get('/products/reviews/{id}', [ProductReviewController::class, 'show']);
+Route::put('/products/reviews/{id}', [ProductReviewController::class, 'update']);
+Route::delete('/products/reviews/{id}', [ProductReviewController::class, 'destroy']);
+
+// Coupon validation endpoint
+Route::post('/coupons/validate', [App\Http\Controllers\CouponController::class, 'validateCoupon']);
+
+// Coupon-Product pivot CRUD
+Route::get('/coupon-product', [CouponProductController::class, 'index']);
+Route::get('/coupon-product/{id}', [CouponProductController::class, 'show']);
+Route::post('/coupon-product', [CouponProductController::class, 'store']);
+Route::put('/coupon-product/{id}', [CouponProductController::class, 'update']);
+Route::delete('/coupon-product/{id}', [CouponProductController::class, 'destroy']);

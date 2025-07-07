@@ -14,6 +14,7 @@ use App\Services\OtpService;
 use App\Services\PhonePePayment;
 use App\Services\ShipRocket;
 use Illuminate\Support\Facades\Log;
+use App\Models\Coupon;
 
 class OrdersController extends Controller
 {
@@ -31,7 +32,28 @@ class OrdersController extends Controller
         'products.*.size_id'    => 'nullable|exists:sizes,id',
         'products.*.quantity'   => 'required|integer|min:1',
         'products.*.price'      => 'required|numeric',
+        'coupon_id'             => 'nullable|exists:coupons,id',
+        'discount'              => 'nullable|numeric',
     ]);
+
+    $discount = $request->discount ?? 0;
+    $coupon_id = $request->coupon_id ?? null;
+
+    // Optionally, validate coupon_id and products here for extra safety
+    if ($coupon_id) {
+        $coupon = Coupon::find($coupon_id);
+        if (!$coupon || !$coupon->is_active) {
+            return response()->json(['message' => 'Invalid or inactive coupon.'], 422);
+        }
+        // If coupon is product-specific, check if it applies to any product in the order
+        if ($coupon->products()->exists()) {
+            $productsInOrder = collect($request->products)->pluck('product_id')->toArray();
+            $applicable = $coupon->products()->whereIn('products.id', $productsInOrder)->exists();
+            if (!$applicable) {
+                return response()->json(['message' => 'Coupon does not apply to selected products.'], 422);
+            }
+        }
+    }
 
     try {
         DB::beginTransaction();
@@ -47,7 +69,8 @@ class OrdersController extends Controller
             'payment_type'       => $request->payment_type,
             'subtotal'           => $request->subtotal,
             'tax'                => $request->tax,
-            'total'              => $request->total,
+            'total'              => $request->total - $discount,
+            'coupon_id'          => $coupon_id,
         ]);
 
         // Save order products

@@ -36,4 +36,9 @@ class Orders extends Model
     {
         return $this->hasMany(OrderProducts::class, 'order_id')->with(["product", "size"]);
     }
+
+    public function coupon()
+    {
+        return $this->belongsTo(Coupon::class, 'coupon_id');
+    }
 }

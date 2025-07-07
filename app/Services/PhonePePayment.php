@@ -19,17 +19,14 @@ class PhonePePayment
     
         $payload = [
             "merchantId" => env('PHONEPE_MERCHANT_ID'),
-            "merchantOrderId" => $order->unique_order_id,
-            "merchantUserId" => $order->user->id,
-            "amount" => (int) ($order->total * 100), // in paise
-            "callbackUrl" => route('phonepe.response'), // or a different route
-            "paymentFlow" => [
-                "type" => "PG_CHECKOUT",
-                "message" => "Order payment for " . $order->unique_order_id,
-                "merchantUrls" => [
-                    "redirectUrl" => route('phonepe.response'),
-                    "redirectMode" => "POST", // IMPORTANT — must be POST to get payload
-                ]
+            "merchantTransactionId" => $order->unique_order_id,
+            "merchantUserId" => $order->user_id,
+            "amount" => (int) ($order->total * 100),
+            "redirectUrl" => route('phonepe.response'),
+            "redirectMode" => "POST",
+            "callbackUrl" => route('phonepe.response'),
+            "paymentInstrument" => [
+                "type" => "PAY_PAGE"
             ]
         ];
     
@@ -63,7 +60,7 @@ class PhonePePayment
 public function phonepeResponse($request)
 {
 
-    $merchantTransactionId = $request->input('merchantOrderId'); // your order ID
+    $merchantTransactionId = $request['merchantOrderId']; // your order ID
 
     // Use unique_order_id for lookup (as you control this field)
     $order = Orders::where('unique_order_id', $merchantTransactionId)->first();

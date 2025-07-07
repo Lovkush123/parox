@@ -43,4 +43,12 @@ class Product extends Model
         return $this->hasMany(Image::class);
     }
 
+    public function reviews(){
+        return $this->hasMany(ProductReview::class)->with(["user", "images"]);
+    }
+
+    public function coupons()
+    {
+        return $this->belongsToMany(Coupon::class, 'coupon_product');
+    }
 }

@@ -6,6 +6,7 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use App\Models\ProductReview;
 
 class ProductController extends Controller
 {
@@ -18,7 +19,7 @@ public function index(Request $request)
     $query = Product::query();
 
     // Eager load relationships
-    $query->with(['category', 'sizes', 'images']);
+    $query->with(['category', 'sizes', 'images', 'reviews', 'coupons']);
 
     // 🔍 Filters
     if ($request->filled('category_id')) {
@@ -76,6 +77,18 @@ public function index(Request $request)
             unset($product->heart_notes, $product->top_notes, $product->base_notes);
         }
 
+        // Attach image URLs to each review
+        if ($product->reviews) {
+            $product->reviews->each(function ($review) {
+                $review->image_urls = $review->images->map(function ($img) {
+                    return $img->image_path ? \Storage::url($img->image_path) : null;
+                })->filter()->values();
+            });
+        }
+
+        // Only include coupons related to this product
+        $product->coupons = $product->coupons;
+
         return $product;
     });
 
@@ -125,9 +138,23 @@ public function index(Request $request)
     /**
      * Display the specified product.
      */
-    public function show(Product $product)
+    public function show($id)
     {
-        return $product;
+        $product = Product::with(['reviews.user', 'reviews.images', 'coupons'])->find($id);
+        if (!$product) {
+            return response()->json(['message' => 'Product not found'], 404);
+        }
+        // Attach image URLs to each review
+        if ($product->reviews) {
+            $product->reviews->each(function ($review) {
+                $review->image_urls = $review->images->map(function ($img) {
+                    return $img->image_path ? \Storage::url($img->image_path) : null;
+                })->filter()->values();
+            });
+        }
+        // Only include coupons related to this product
+        $product->coupons = $product->coupons;
+        return response()->json($product);
     }
 
     /**

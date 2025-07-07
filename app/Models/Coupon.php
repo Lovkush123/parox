@@ -19,4 +19,9 @@ class Coupon extends Model
         'end_date',
         'is_active',
     ];
+
+    public function products()
+    {
+        return $this->belongsToMany(Product::class, 'coupon_product');
+    }
 }

@@ -7,10 +7,11 @@ use Illuminate\Http\Request;
 
 class CouponController extends Controller
 {
-    // Fetch all coupons
+    // List all coupons with related products
     public function index()
     {
-        return response()->json(Coupon::all(), 200);
+        $coupons = \App\Models\Coupon::with('products')->get();
+        return response()->json($coupons);
     }
 
     // Store a new coupon
@@ -78,5 +79,48 @@ class CouponController extends Controller
         $coupon->delete();
 
         return response()->json(['message' => 'Coupon deleted'], 200);
+    }
+
+    // Validate coupon code for given products
+    public function validateCoupon(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string',
+            'product_ids' => 'nullable|array',
+            'product_ids.*' => 'integer|exists:products,id',
+            'total' => 'required|numeric',
+        ]);
+
+        $coupon = Coupon::where('code', $request->code)->where('is_active', true)->first();
+        if (!$coupon) {
+            return response()->json(['message' => 'Invalid or inactive coupon code.'], 422);
+        }
+
+        $productsInOrder = $request->product_ids ?? [];
+        $applicable = true;
+        if ($coupon->products()->exists()) {
+            $applicable = $coupon->products()->whereIn('products.id', $productsInOrder)->exists();
+            if (!$applicable) {
+                return response()->json(['message' => 'Coupon does not apply to selected products.'], 422);
+            }
+        }
+
+        // Calculate discount
+        $discount = 0;
+        if ($coupon->type === 'percent') {
+            $discount = ($request->total * $coupon->value) / 100;
+        } else {
+            $discount = $coupon->value;
+        }
+
+        return response()->json([
+            'coupon_id' => $coupon->id,
+            'code' => $coupon->code,
+            'type' => $coupon->type,
+            'value' => $coupon->value,
+            'discount' => $discount,
+            'applicable' => $applicable,
+            'products' => $coupon->products()->pluck('products.id'),
+        ]);
     }
 }
