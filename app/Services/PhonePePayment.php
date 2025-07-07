@@ -19,7 +19,7 @@ class PhonePePayment
     
         $payload = [
             "merchantId" => env('PHONEPE_MERCHANT_ID'),
-            "merchantTransactionId" => $order->unique_order_id,
+            "merchantOrderId" => $order->unique_order_id,
             "merchantUserId" => $order->user_id,
             "amount" => (int) ($order->total * 100),
             "redirectUrl" => route('phonepe.response'),
@@ -47,6 +47,7 @@ class PhonePePayment
     
             return response()->json([
                 'message' => 'Redirect to PhonePe payment page',
+                'access_token' => $accessToken,
                 'data' => $response->json(),
             ]);
         }
