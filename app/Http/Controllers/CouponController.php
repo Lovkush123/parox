@@ -17,8 +17,10 @@ class CouponController extends Controller
         if ($code) {
             $coupons = $coupons->where('code', $code);
         }
+
+        $data = $coupons->get();
     
-        if ($code && $coupons->isEmpty()) {
+        if ($code && $data->isEmpty()) {
             return response()->json(["message" => "Coupon Code invalid or Expired"], 404);
         }
 

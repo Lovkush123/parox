@@ -102,7 +102,7 @@ public function phonepeResponse($request)
         $order->update(['payment_status' => 'failed']);
     }
 
-    return response()->json(['message' => "Payment Status updated and store successfully"]);
+    return response()->json(['message' => "Payment Status updated and store successfully", "data"=>$statusData]);
 }
 
 public function getPhonePeAccessToken()
