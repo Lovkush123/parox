@@ -25,6 +25,8 @@ class Product extends Model
     'gender',
     'status', // if you want to mass assign status as well
     'type',
+    'no_choose',
+    'choose_category',
 ];
     // Relationship to Category (optional, if you have a Category model)
    // Product.php
@@ -48,8 +50,8 @@ class Product extends Model
         return $this->hasMany(ProductReview::class)->with(["user", "images"]);
     }
 
-    public function coupons()
-    {
-        return $this->belongsToMany(Coupon::class, 'coupon_product');
-    }
+    // public function coupons()
+    // {
+    //     return $this->belongsToMany(Coupon::class, 'coupon_product');
+    // }
 }

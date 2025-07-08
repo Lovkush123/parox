@@ -19,7 +19,7 @@ public function index(Request $request)
     $query = Product::query();
 
     // Eager load relationships
-    $query->with(['category', 'sizes', 'images', 'reviews', 'coupons']);
+    $query->with(['category', 'sizes', 'images', 'reviews']);
 
     // 🔍 Filters
     if ($request->filled('category_id')) {
@@ -87,7 +87,7 @@ public function index(Request $request)
         }
 
         // Only include coupons related to this product
-        $product->coupons = $product->coupons;
+        // $product->coupons = $product->coupons;
 
         return $product;
     });
@@ -116,6 +116,8 @@ public function index(Request $request)
             'features'    => 'nullable|string',
             'gender'      => 'nullable|string',
             'type'        => 'nullable|in:single,multiple',
+            'no_choose'   => 'nullable|integer',
+            'choose_category' => 'nullable|exists:categories,id',
         ]); 
 
         $validated['slug'] = Str::slug($validated['name']);
@@ -146,7 +148,7 @@ public function index(Request $request)
      */
     public function show($id)
     {
-        $product = Product::with(['reviews.user', 'reviews.images', 'coupons'])->find($id);
+        $product = Product::with(['reviews.user', 'reviews.images'])->find($id);
         if (!$product) {
             return response()->json(['message' => 'Product not found'], 404);
         }
@@ -184,6 +186,8 @@ public function index(Request $request)
             'features'    => 'nullable|string',
             'gender'      => 'nullable|string',
             'type'        => 'nullable|in:single,multiple',
+            'no_choose'   => 'nullable|integer',
+            'choose_category' => 'nullable|exists:categories,id',
         ]);
 
         if ($request->hasFile('image')) {
