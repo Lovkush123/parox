@@ -2,31 +2,31 @@
 
 namespace App\Services;
 
+use App\Mail\BookingConfirmationMail;
 use App\Models\Orders;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class PhonePePayment
 {
     public function initiatePhonePePayment($order)
     {
         $accessToken = $this->getPhonePeAccessToken();
-    
         if (!$accessToken) {
             return response()->json(['error' => 'Failed to get PhonePe access token'], 500);
         }
     
         $payload = [
-            "merchantId" => env('PHONEPE_MERCHANT_ID'),
             "merchantOrderId" => $order->unique_order_id,
-            "merchantUserId" => $order->user_id,
             "amount" => (int) ($order->total * 100),
-            "redirectUrl" => route('phonepe.response'),
-            "redirectMode" => "POST",
-            "callbackUrl" => route('phonepe.response'),
-            "paymentInstrument" => [
-                "type" => "PAY_PAGE"
+            "paymentFlow" => [
+                "type" => "PG_CHECKOUT",
+                "message" => "Payment for order #" . $order->unique_order_id,
+                "merchantUrls" => [
+                    "redirectUrl" => "https://66c50ba9ea02.ngrok-free.app/api/phonepe/result"
+                ]
             ]
         ];
     
@@ -36,20 +36,15 @@ class PhonePePayment
             'Content-Type'  => 'application/json',
             'Authorization' => 'O-Bearer ' . $accessToken
         ])->post($baseUrl . '/checkout/v2/pay', $payload);
-
     
-        if ($response->successful()) {
-    
+        if ($response->successful() && isset($response->json()['redirectUrl'])) {
             $order->update([
                 'payment_status' => 'processing',
-                'payment_response_id' => $response->json()['orderId'],
+                'payment_response_id' => $response->json()['orderId'] ?? null,
             ]);
-    
-            return response()->json([
-                'message' => 'Redirect to PhonePe payment page',
-                'access_token' => $accessToken,
-                'data' => $response->json(),
-            ]);
+            $responseData =  $response->json();
+            $responseData["merchantOrderId"] = $order->unique_order_id;
+            return $responseData;
         }
     
         Log::error('PhonePe Payment Initiation Error:', $response->json());
@@ -60,51 +55,54 @@ class PhonePePayment
 
 public function phonepeResponse($request)
 {
+    $merchantOrderId = $request->input('merchantOrderId');
+    $orderId = $request->input('orderId');
 
-    $merchantTransactionId = $request['merchantOrderId']; // your order ID
-
-    // Use unique_order_id for lookup (as you control this field)
-    $order = Orders::where('unique_order_id', $merchantTransactionId)->first();
+    $order =  Orders::with(['user', 'address', 'products'])->where('unique_order_id', $merchantOrderId)->first();
 
     if (!$order) {
-        Log::error('PhonePe Response: Order not found', ['merchantTransactionId' => $merchantTransactionId]);
-        return redirect(env('PHONEPE_FAILURE_URL'))->with('error', 'Order not found');
+        Log::error('PhonePe Callback: Order not found', ['merchantOrderId' => $merchantOrderId]);
+        return response()->json(['error' => 'Order not found'], 404);
     }
 
-    // Get access token for PhonePe API
+    // Always verify status with PhonePe API
     $accessToken = $this->getPhonePeAccessToken();
     if (!$accessToken) {
-        Log::error('PhonePe Status: Failed to get access token');
-        return redirect(env('PHONEPE_FAILURE_URL'))->with('error', 'Payment verification failed');
+        Log::error('PhonePe Callback: Failed to get access token');
+        return response()->json(['error' => 'Payment verification failed'], 500);
     }
 
-    // Fetch payment status from PhonePe API
     $baseUrl = $this->getPhonePeBaseUrl();
+    $statusUrl = $baseUrl . "/checkout/v2/order/{$merchantOrderId}/status";
 
-    // Create checksum for verification as per PhonePe docs
-    $apiPath = $baseUrl."checkout/v2/order/{$order->unique_order_id}/status";
+    $statusResponse = Http::withHeaders([
+        'Content-Type'  => 'application/json',
+        'Authorization' => 'O-Bearer ' . $accessToken
+    ])->get($statusUrl);
 
-    try {
-        $response = Http::withHeaders([
-            'Content-Type'  => 'application/json',
-            'Authorization' => 'O-Bearer ' . $accessToken
-        ])->get($apiPath);
+    $statusData = $statusResponse->json();
 
-        $statusResponse = $response->json();
-        Log::info('PhonePe Status Response', ['response' => $statusResponse, 'http_status' => $response->status()]);
-    } catch (\Exception $e) {
-        Log::error('PhonePe Status API Exception', ['error' => $e->getMessage()]);
-        return redirect(env('PHONEPE_FAILURE_URL'))->with('error', 'Payment verification failed');
+    if (isset($statusData['state']) && $statusData['state'] === 'COMPLETED') {
+        $order->update(['payment_status' => 'success']);
+
+        // =============== Create Shiprocket order ==============
+        $shipRocket = new ShipRocket();
+        $shipRocket->createOrder($order);
+
+        // ============== Generate PDf ====================
+        $url = GenratePdf::generateInvoice($order);
+
+        // ================== Sent Order Success Mail ===============
+        Mail::to($order->user->email)->send(new BookingConfirmationMail($order));
+
+        // ============== Send Order Success Whatsapp ===============
+        OtpService::sendWhatsAppBookingConfirmation($order, $url);
+        
+    } else {
+        $order->update(['payment_status' => 'failed']);
     }
 
-    if (isset($statusResponse['code']) && $statusResponse['code'] === 'PAYMENT_SUCCESS') {
-        $order->update([
-            'payment_status' => 'success',
-        ]);
-
-        return redirect(env('PHONEPE_REDIRECT_URL'))->with('message', 'Payment successful');
-    }
-
+    return response()->json(['message' => "Payment Status updated and store successfully"]);
 }
 
 public function getPhonePeAccessToken()

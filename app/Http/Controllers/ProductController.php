@@ -115,6 +115,7 @@ public function index(Request $request)
             'base_notes'  => 'nullable|string',
             'features'    => 'nullable|string',
             'gender'      => 'nullable|string',
+            'type'        => 'nullable|in:single,multiple',
         ]); 
 
         $validated['slug'] = Str::slug($validated['name']);
@@ -129,6 +130,11 @@ public function index(Request $request)
          if ($request->hasFile('image')) {
 
             $validated['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        // Set default type if not provided
+        if (!isset($validated['type'])) {
+            $validated['type'] = 'single';
         }
 
         $product = Product::create($validated);
@@ -177,6 +183,7 @@ public function index(Request $request)
             'base_notes'  => 'nullable|string',
             'features'    => 'nullable|string',
             'gender'      => 'nullable|string',
+            'type'        => 'nullable|in:single,multiple',
         ]);
 
         if ($request->hasFile('image')) {
@@ -185,6 +192,11 @@ public function index(Request $request)
             }
 
             $validated['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        // Set default type if not provided
+        if (!isset($validated['type'])) {
+            $validated['type'] = 'single';
         }
 
         $product->update($validated);

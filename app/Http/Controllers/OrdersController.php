@@ -71,6 +71,7 @@ class OrdersController extends Controller
             'tax'                => $request->tax,
             'total'              => $request->total - $discount,
             'coupon_id'          => $coupon_id,
+            'discount_amount'    => $request->discount_amount,
         ]);
 
         // Save order products
@@ -217,12 +218,6 @@ class OrdersController extends Controller
 
     public function phonepeResponse(Request $request)
     {
-        Log::info('PhonePe callback hit', [
-            'all' => $request->all(),
-            'raw' => file_get_contents('php://input')
-        ]);
-
-        return  file_get_contents('php://input');
         
         $phonePePayment = new PhonePePayment();
         return $phonePePayment->phonepeResponse($request);

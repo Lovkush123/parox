@@ -24,6 +24,7 @@ class Product extends Model
     'features',
     'gender',
     'status', // if you want to mass assign status as well
+    'type',
 ];
     // Relationship to Category (optional, if you have a Category model)
    // Product.php

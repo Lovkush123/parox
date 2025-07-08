@@ -47,7 +47,7 @@ public function createOrder($order)
             "breadth" => (float) ($size->width ?? 10),
             "height" => (float) ($size->height ?? 10),
             "weight" => (float) ($size->weight ?? 1),
-
+            "discount"=> $size->mrp - $item->price,
             // New fields
             "hsn_code" => '3303',
             "gst_rate" => 18,
@@ -77,8 +77,10 @@ public function createOrder($order)
         "order_items" => $items,
         "payment_method" => $order->payment_type,
         "sub_total" => $order->subtotal,
+        "tax"=> $order->tax,
+        "total"=> $order->total,
+        "discount"=> $order->discount_amount,
 
-        // Provide valid numeric values for order dimensions (use max or sum of items or fixed defaults)
         "length" => max(array_column($items, 'length')) ?: 10,
         "breadth" => max(array_column($items, 'breadth')) ?: 10,
         "height" => max(array_column($items, 'height')) ?: 10,

@@ -8,10 +8,25 @@ use Illuminate\Http\Request;
 class CouponController extends Controller
 {
     // List all coupons with related products
-    public function index()
+    public function index(Request $request)
     {
-        $coupons = \App\Models\Coupon::with('products')->get();
-        return response()->json($coupons);
+        $code = $request->get("code");
+    
+        $coupons = Coupon::with('products')->where('is_active', 1);
+    
+        if ($code) {
+            $coupons = $coupons->where('code', $code);
+        }
+    
+        if ($code && $coupons->isEmpty()) {
+            return response()->json(["message" => "Coupon Code invalid or Expired"], 404);
+        }
+
+        $perPage = (int) ($request->get('per_page', 10));
+        $page = (int) ($request->get('page_number', 1));
+        $coupons = $coupons->paginate($perPage, ['*'], 'page', $page);
+    
+        return response()->json(["message" => "success", "data" => $coupons]);
     }
 
     // Store a new coupon
@@ -88,7 +103,7 @@ class CouponController extends Controller
             'code' => 'required|string',
             'product_ids' => 'nullable|array',
             'product_ids.*' => 'integer|exists:products,id',
-            'total' => 'required|numeric',
+            'total' => 'nullable|numeric',
         ]);
 
         $coupon = Coupon::where('code', $request->code)->where('is_active', true)->first();
