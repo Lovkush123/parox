@@ -224,6 +224,22 @@ class OrdersController extends Controller
     }
 
 
+    public function shipRocketOrderCreate(Request $request)
+    {
+        $orderId = $request->input("order_id");
+
+
+        $order = Orders::where("unique_order_id", $orderId);
+
+        if (!$order) {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+        
+        $phonePePayment = new ShipRocket();
+        return $phonePePayment->createOrder($order);
+    }
+
+
 
 
 

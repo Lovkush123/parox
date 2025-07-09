@@ -15,8 +15,10 @@ use App\Http\Controllers\{
     ImageController,
     OrdersController,
     ProductReviewController,
-    CouponProductController
+    CouponProductController,
+    RefundRequestController,
 };
+use App\Models\Orders;
 
 // ✅ Auth Routes
 Route::post('/login-or-register', [UserController::class, 'loginOrRegisterWithOTP']);
@@ -86,3 +88,9 @@ Route::get('/coupon-product/{id}', [CouponProductController::class, 'show']);
 Route::post('/coupon-product', [CouponProductController::class, 'store']);
 Route::put('/coupon-product/{id}', [CouponProductController::class, 'update']);
 Route::delete('/coupon-product/{id}', [CouponProductController::class, 'destroy']);
+
+Route::resource('refund-requests', RefundRequestController::class);
+Route::post('/phone-refund-request', [RefundRequestController::class, 'phonePeRfundRequestCreate']);
+Route::post('/phone-refund-status', [RefundRequestController::class, 'phonePeStatus']);
+
+Route::post('/shiprocket-order-create', [OrdersController::class, 'shipRocketOrderCreate']);

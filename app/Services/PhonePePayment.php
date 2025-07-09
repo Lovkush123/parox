@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Mail\BookingConfirmationMail;
+use App\Models\Order;
 use App\Models\Orders;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -105,6 +106,72 @@ public function phonepeResponse($request)
     return response()->json(['message' => "Payment Status updated and store successfully", "data"=>$statusData]);
 }
 
+// ==================== Refund Request ===================
+
+public function phonePeRefund($request)
+{
+    $orders = Order::where('unique_order_id', $request->order_id)->get();
+
+    if (!$orders) {
+        Log::error('PhonePe Callback: Order not found', ['Order Id' => $request->order_id]);
+        return response()->json(['error' => 'Order not found'], 404);
+    }
+    
+    $accessToken = $this->getPhonePeAccessToken();
+
+    if (!$accessToken) {
+        return response()->json(['error' => 'Failed to get PhonePe access token'], 500);
+    }
+
+    $baseUrl = $this->getPhonePeBaseUrl();
+    $endpoint = $baseUrl . '/payments/v2/refund';
+    $merchantRefundId = 'refund' . now()->format('YmdHis') . strtoupper(\Str::random(5));
+
+    $payload = [
+        'merchantRefundId' => $merchantRefundId,
+        'originalMerchantOrderId' => $request->order_id,
+        'amount' => (int) $request->amount,
+    ];
+
+    $response = \Http::withHeaders([
+        'Content-Type' => 'application/json',
+        'Authorization' => 'O-Bearer ' . $accessToken,
+    ])->post($endpoint, $payload);
+
+    return response()->json(["message"=>"Refund Request Proceed", "data"=>$response->json()]);
+}
+
+// ====================== Phone Pe status Check ===============
+
+public function phonepeStatusCheck($request)
+{
+    $orderId = $request->input('order_id');
+
+    // Always verify status with PhonePe API
+    $accessToken = $this->getPhonePeAccessToken();
+
+    if (!$accessToken) {
+        Log::error('PhonePe Callback: Failed to get access token');
+        return response()->json(['error' => 'Payment verification failed'], 500);
+    }
+
+    $baseUrl = $this->getPhonePeBaseUrl();
+    $statusUrl = $baseUrl . "/payments/v2/refund/{$orderId}/status";
+
+    $statusResponse = Http::withHeaders([
+        'Content-Type'  => 'application/json',
+        'Authorization' => 'O-Bearer ' . $accessToken
+    ])->get($statusUrl);
+
+    $statusData = $statusResponse->json();
+
+
+    return response()->json(['message' => "Phone Pe Refund Status", "data"=>$statusData]);
+}
+
+
+// ================== Phone Pe Access Token ===============
+
 public function getPhonePeAccessToken()
 {
     $baseUrl = $this->getPhonePeBaseUrl();
@@ -130,4 +197,5 @@ public function getPhonePeBaseUrl()
         ? env('PHONEPE_LIVE_URL')
         : env('PHONEPE_UAT_URL');
 }
+
 }

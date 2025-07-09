@@ -81,7 +81,7 @@ public function index(Request $request)
         if ($product->reviews) {
             $product->reviews->each(function ($review) {
                 $review->image_urls = $review->images->map(function ($img) {
-                    return $img->image_path ? \Storage::url($img->image_path) : null;
+                    return $img->image_path ? asset('storage/' . $img->image_path) : null;
                 })->filter()->values();
             });
         }

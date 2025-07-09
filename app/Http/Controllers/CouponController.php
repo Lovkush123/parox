@@ -43,6 +43,7 @@ class CouponController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
             'is_active' => 'boolean',
+            'description' => 'nullable|string',
         ]);
 
         $coupon = Coupon::create($validated);
@@ -78,6 +79,7 @@ class CouponController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
             'is_active' => 'boolean',
+            'description' => 'nullable|string',
         ]);
 
         $coupon->update($validated);
