@@ -85,6 +85,7 @@ public function phonepeResponse($request)
 
     if (isset($statusData['state']) && $statusData['state'] === 'COMPLETED') {
         $order->update(['payment_status' => 'success']);
+        $order->save();
 
         // =============== Create Shiprocket order ==============
         $shipRocket = new ShipRocket();
@@ -97,7 +98,7 @@ public function phonepeResponse($request)
         Mail::to($order->user->email)->send(new BookingConfirmationMail($order));
 
         // ============== Send Order Success Whatsapp ===============
-        OtpService::sendWhatsAppBookingConfirmation($order, $url);
+        // OtpService::sendWhatsAppBookingConfirmation($order, $url);
         
     } else {
         $order->update(['payment_status' => 'failed']);
